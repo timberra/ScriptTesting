@@ -1,0 +1,106 @@
+//Checking if trigger works
+
+function sendTestEmail() {
+  var recipient = "your.email@example.com";  // Replace with your email
+  var subject = "Test Email from Google Apps Script";
+  var body = "This is an automated test email sent every 10 minutes.";
+  
+  MailApp.sendEmail(recipient, subject, body);
+}
+
+// Checking if the count is correct
+
+function sendTestEmail() {
+  var recipient = "your.email@example.com";
+  var subject = "Test Email from Google Apps Script";
+  var body = "This is an automated test email sent every 10 minutes.";
+
+  MailApp.sendEmail(recipient, subject, body);
+}
+
+// See if the email is answerd
+
+function processJobApplications() {
+  var timeZone = "Europe/Helsinki";
+  var now = new Date();
+
+  // Only during working hours
+  var hour = parseInt(Utilities.formatDate(now, timeZone, "H"), 10);
+  if (hour < 10 || hour >= 17) return;
+
+  // Skip weekends
+  var day = now.getDay();
+  if (day === 0 || day === 6) return;
+
+  // Skip public holidays
+  if (isPublicHoliday(now)) return;
+
+  // Configuration
+  var senderEmail = "liga.griezne@gmail.com"; // replace with actual
+  var jobLinks = {
+    "AMAZING": "https://www.linkedin.com/in/liga-griezne/"
+    // Add more titles and links here
+  };
+
+  var yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  var query = `from:${senderEmail} is:unread after:${formatDateForGmail(yesterday)}`;
+  var threads = GmailApp.search(query);
+  // var signature = GmailApp.getSignature();
+
+  threads.forEach(function(thread) {
+    var messages = thread.getMessages();
+
+    messages.forEach(function(message) {
+      if (!message.isUnread()) return;
+
+      var subject = message.getSubject();
+      var jobTitle = extractJobTitle(subject);
+      var jobLink = jobLinks[jobTitle];
+      if (!jobLink) {
+  // No matching link, skip this email
+      return;
+      }
+
+      // Build email body
+      var htmlBody =
+        `<p>Thank you for your application for <b>${jobTitle}</b>.</p>` +
+        `<p>Please visit <a href="${jobLink}">this page</a> for the next steps.</p><br>`; 
+        // + signature;
+
+      // Get reply-to address
+      var replyTo = message.getReplyTo() || message.getFrom();
+
+      // Send email
+      GmailApp.sendEmail(replyTo, "", "", {
+        htmlBody: htmlBody,
+        replyTo: "", // Avoid reply loops
+        name: "HR Team"
+      });
+
+      message.markRead();
+    });
+  });
+}
+
+// Extract job title from the subject
+function extractJobTitle(subject) {
+  var parts = subject.split("your job ad");
+  return parts.length > 1 ? parts[1].trim() : "Unknown Job Title";
+}
+
+// Format date for Gmail search
+function formatDateForGmail(date) {
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), "yyyy/MM/dd");
+}
+
+// Check if today is a public holiday
+function isPublicHoliday(date) {
+  var holidays = [
+    "2025-01-01", "2025-05-01", "2025-06-20", "2025-12-25", "2025-12-26"
+  ];
+  var formatted = Utilities.formatDate(date, "Europe/Helsinki", "yyyy-MM-dd");
+  return holidays.includes(formatted);
+}
+
+
+
